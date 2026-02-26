@@ -19,11 +19,14 @@ export default function Onboarding({ onGroupCreated }) {
 
       if (errorGrupo) throw errorGrupo;
 
-      // 2. Vincular el usuario a ese espacio
+      // 2. VINCULAR PERFIL (USAMOS UPSERT: Lo crea si no existe, lo actualiza si existe)
       const { error: errorPerfil } = await supabase
         .from('perfiles')
-        .update({ grupo_id: grupo.id })
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id, 
+          grupo_id: grupo.id,
+          nombre: user.user_metadata?.nombre || 'Mi Usuario' // Rescatamos el nombre del registro
+        });
 
       if (errorPerfil) throw errorPerfil;
 
