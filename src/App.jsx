@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard'; // <--- Importamos el nuevo Dashboard
+import Register from './pages/Register'; // <--- Importamos el nuevo Register
 
 function App() {
   return (
@@ -10,7 +11,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-
+          <Route path="/register" element={<Register />} />
           <Route element={<ProtectedRoute />}>
             {/* Ahora la ruta raíz carga el Dashboard inteligente */}
             <Route path="/" element={<Dashboard />} />
