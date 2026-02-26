@@ -57,9 +57,15 @@ export default function Dashboard() {
     } catch (error) { console.error('Error:', error); } finally { setLoading(false); }
   };
 
-  const cargarMovimientos = useCallback(async (gPers, gComp) => {
+const cargarMovimientos = useCallback(async (gPers, gComp) => {
     const grupos = [gPers]; if (gComp) grupos.push(gComp);
-    const { data } = await supabase.from('transacciones').select(`*, perfiles(nombre), categorias(nombre, tipo), metodos_pago(nombre)`).in('grupo_id', grupos).order('fecha', { ascending: false }).limit(1000);
+    
+    // Le agregamos el 'error' para ver si Supabase se está quejando de algo
+    const { data} = await supabase.from('transacciones')
+      .select(`*, perfiles(nombre), categorias(nombre, tipo), metodos_pago(nombre)`)
+      .in('grupo_id', grupos)
+      .order('fecha', { ascending: false })
+      .limit(1000);
     if (data) setMovimientos(data);
   }, []);
 
