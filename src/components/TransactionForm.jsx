@@ -255,7 +255,7 @@ export default function TransactionForm({ onTransactionAdded, grupoActivoId }) {
               <div className="w-1/3">
                 <label className="block text-xs font-medium text-slate-500 mb-1">Cant. Cuotas</label>
                 <select value={cuotas} onChange={(e) => setCuotas(Number(e.target.value))} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-indigo-500 bg-white">
-                  {[1, 3, 6, 9, 12, 18, 24].map(num => <option key={num} value={num}>{num} cuotas</option>)}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 18, 24].map(num => <option key={num} value={num}>{num} cuotas</option>)}
                 </select>
               </div>
               <div className="w-2/3">

@@ -69,13 +69,34 @@ const cargarMovimientos = useCallback(async (gPers, gComp) => {
     if (data) setMovimientos(data);
   }, []);
 
-  useEffect(() => {
-    const filtradosPorVista = movimientos.filter(mov => vistaActiva === 'total' ? true : mov.grupo_id === (vistaActiva === 'personal' ? perfil?.grupo_id : perfil?.grupo_compartido_id));
+useEffect(() => {
+    // 1. Filtramos según la pestaña (Personal, Compartido o Total)
+    const filtradosPorVista = movimientos.filter(mov => 
+      vistaActiva === 'total' ? true : mov.grupo_id === (vistaActiva === 'personal' ? perfil?.grupo_id : perfil?.grupo_compartido_id)
+    );
     
-    const ingTotales = filtradosPorVista.filter(t => t.tipo === 'ingreso' && (!t.moneda || t.moneda === 'ARS')).reduce((a, c) => a + Number(c.monto), 0);
-    const egrTotales = filtradosPorVista.filter(t => t.tipo === 'egreso' && (!t.moneda || t.moneda === 'ARS')).reduce((a, c) => a + Number(c.monto), 0);
-    const saldoHistoricoArs = ingTotales - egrTotales;
+    // --- NUEVA LÓGICA PARA TARJETAS DE CRÉDITO ---
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const anioActual = hoy.getFullYear();
 
+    // Filtramos para IGNORAR las cuotas de los meses futuros en el saldo histórico
+    const filtradosHistoricos = filtradosPorVista.filter(mov => {
+      const fechaMov = new Date(mov.fecha);
+      const anioMov = fechaMov.getFullYear();
+      const mesMov = fechaMov.getMonth();
+      
+      // Conservar si es de un año anterior, o si es de este año pero hasta el mes actual
+      return anioMov < anioActual || (anioMov === anioActual && mesMov <= mesActual);
+    });
+
+    // Usamos 'filtradosHistoricos' en lugar de 'filtradosPorVista' para el cálculo general
+    const ingTotales = filtradosHistoricos.filter(t => t.tipo === 'ingreso' && (!t.moneda || t.moneda === 'ARS')).reduce((a, c) => a + Number(c.monto), 0);
+    const egrTotales = filtradosHistoricos.filter(t => t.tipo === 'egreso' && (!t.moneda || t.moneda === 'ARS')).reduce((a, c) => a + Number(c.monto), 0);
+    const saldoHistoricoArs = ingTotales - egrTotales;
+    // ---------------------------------------------
+
+    // 2. Resumen específico del mes que estás mirando en el calendario (Queda igual)
     const filtradosDelMes = filtradosPorVista.filter(mov => {
       const fechaMov = new Date(mov.fecha);
       return fechaMov.getMonth() === fechaFiltro.mes && fechaMov.getFullYear() === fechaFiltro.anio;
@@ -139,19 +160,33 @@ const cargarMovimientos = useCallback(async (gPers, gComp) => {
     }
   };
 
-  const cambiarMes = (direccion) => {
+const cambiarMes = (direccion) => {
     const hoy = new Date();
     setFechaFiltro(prev => {
       let nuevoMes = prev.mes + direccion;
       let nuevoAnio = prev.anio;
+      
+      // Ajuste de cambio de año
       if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
       if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
-      if (nuevoAnio > hoy.getFullYear() || (nuevoAnio === hoy.getFullYear() && nuevoMes > hoy.getMonth())) return prev;
+      
+      // NUEVA LÓGICA: Calculamos cuántos meses hacia el futuro está viajando
+      const mesesDeDiferencia = (nuevoAnio - hoy.getFullYear()) * 12 + (nuevoMes - hoy.getMonth());
+      
+      // Si intenta ir más allá de 18 meses, lo frenamos
+      if (mesesDeDiferencia > 18) return prev;
+      
       return { mes: nuevoMes, anio: nuevoAnio };
     });
   };
 
-  const esMesActual = fechaFiltro.mes === new Date().getMonth() && fechaFiltro.anio === new Date().getFullYear();
+  // NUEVO: Reemplazamos 'esMesActual' por 'esMesLimite'
+  const esMesLimite = (() => {
+    const hoy = new Date();
+    const mesesDeDiferencia = (fechaFiltro.anio - hoy.getFullYear()) * 12 + (fechaFiltro.mes - hoy.getMonth());
+    return mesesDeDiferencia >= 18;
+  })();
+
   const mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const textoMesActual = `${mesesNombres[fechaFiltro.mes]} ${fechaFiltro.anio}`;
 
@@ -221,10 +256,13 @@ const cargarMovimientos = useCallback(async (gPers, gComp) => {
           </div>
         )}
 
+{/* Calendario */}
         <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-slate-200 p-2 mb-6 w-full max-w-sm mx-auto">
           <button onClick={() => cambiarMes(-1)} className="p-3 hover:bg-slate-50 rounded-full text-slate-500"><ChevronLeft size={24}/></button>
           <h2 className="font-bold text-slate-800 text-lg capitalize">{textoMesActual}</h2>
-          <button onClick={() => cambiarMes(1)} disabled={esMesActual} className={`p-3 rounded-full ${esMesActual ? 'text-slate-200' : 'hover:bg-slate-50 text-slate-500'}`}><ChevronRight size={24}/></button>
+          
+          {/* Reemplazamos esMesActual por esMesLimite */}
+          <button onClick={() => cambiarMes(1)} disabled={esMesLimite} className={`p-3 rounded-full transition-colors ${esMesLimite ? 'text-slate-200 cursor-not-allowed' : 'hover:bg-slate-50 text-slate-500'}`}><ChevronRight size={24}/></button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
